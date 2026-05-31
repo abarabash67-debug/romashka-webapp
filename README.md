@@ -52,11 +52,8 @@ cat > /root/bot/webapp/index.html << 'EOF'
         tg.ready();
         tg.expand();
 
-        function buyRoom(roomId) {
-            tg.sendData(JSON.stringify({
-                action: 'view_room',
-                room_id: roomId
-            }));
+        function buyRoom(id) {
+            tg.openTelegramLink("https://t.me_" + id);
             tg.close();
         }
 
