@@ -37,10 +37,8 @@
             align-items: center;
             justify-content: center;
             font-size: 32px;
-        }
-        .spoiler {
-            background: #2d2d2d;
-            color: white;
+            background-size: cover;
+            background-position: center;
         }
         .card-info {
             padding: 0 12px 12px 12px;
@@ -92,11 +90,6 @@
             padding: 48px;
             color: #666;
         }
-        .error {
-            text-align: center;
-            padding: 48px;
-            color: red;
-        }
     </style>
 </head>
 <body>
@@ -109,26 +102,29 @@
         tg.ready();
         tg.expand();
 
-        // Получаем hunter_id из данных Telegram (позже добавим)
-        let hunterId = 0;
-        let hunterHasRadar = false; // будет true, если привел 3 друзей
-
-        // API URL (твой сервер)
         const API_URL = 'http://185.200.178.59:8001/api/rooms';
+
+        // Функция для преобразования file_id в ссылку Telegram
+        function getTelegramImageUrl(fileId) {
+            return `https://api.telegram.org/file/bot${tg.initDataUnsafe.user.id}/photos/${fileId}`;
+            // Временно используем эмодзи, так как нужен токен бота
+            // Вместо реального фото пока оставляем эмодзи
+            return '📸';
+        }
 
         async function loadRooms() {
             try {
-                const response = await fetch(`${API_URL}?hunter_id=${hunterId}&page=1&per_page=20`);
+                const response = await fetch(`${API_URL}?page=1&per_page=20`);
                 const data = await response.json();
                 
                 if (data.error) {
-                    document.getElementById('app').innerHTML = `<div class="error">Ошибка: ${data.error}</div>`;
+                    document.getElementById('app').innerHTML = `<div class="loading">Ошибка: ${data.error}</div>`;
                     return;
                 }
                 
                 render(data.rooms);
             } catch (err) {
-                document.getElementById('app').innerHTML = `<div class="error">Ошибка загрузки: ${err.message}</div>`;
+                document.getElementById('app').innerHTML = `<div class="loading">Ошибка загрузки: ${err.message}</div>`;
             }
         }
 
@@ -141,6 +137,25 @@
             tg.close();
         }
 
+        function renderPhoto(photoValue, index) {
+            if (photoValue && photoValue.startsWith('AgAC')) {
+                // Это реальный file_id, но показать его в WebApp нельзя напрямую
+                // Нужен бот-посредник. Пока показываем эмодзи
+                if (index === 2) {
+                    return '<div class="photo spoiler" style="display: flex; align-items: center; justify-content: center;">🔒</div>';
+                } else {
+                    return '<div class="photo" style="display: flex; align-items: center; justify-content: center;">📸</div>';
+                }
+            } else {
+                // Эмодзи или пусто
+                if (index === 2) {
+                    return '<div class="photo spoiler" style="display: flex; align-items: center; justify-content: center;">🔒</div>';
+                } else {
+                    return '<div class="photo" style="display: flex; align-items: center; justify-content: center;">📸</div>';
+                }
+            }
+        }
+
         function render(rooms) {
             if (!rooms || rooms.length === 0) {
                 document.getElementById('app').innerHTML = '<div class="loading">😢 Пока нет анкет. Заходи позже!</div>';
@@ -150,37 +165,24 @@
             let html = '<h2>🌸 Охота на девушек</h2>';
             
             for (let room of rooms) {
-                // Сортируем фото: первые два обычные, третье под спойлером
-                const photo1 = room.photos?.[0] || '📸';
-                const photo2 = room.photos?.[1] || '📸';
-                const photo3 = room.photos?.[2] || '🔒';
-                
-                html += `
-                    <div class="card">
-                        <div class="photos-row">
-                            <div class="photo">${photo1}</div>
-                            <div class="photo">${photo2}</div>
-                            <div class="photo spoiler">${photo3}</div>
-                        </div>
-                        <div class="card-info">
-                            ${room.isBoosted ? '<div class="boost-badge">🔥 ПОДНЯТО 🔥</div>' : ''}
-                            <span class="card-name">${room.name}</span>
-                            <span class="card-age">${room.age} лет</span>
-                            <div class="card-city">
-                                ${hunterHasRadar ? '📍 ' + room.city : '🔒 Город скрыт. Пригласи 3 друзей!'}
-                            </div>
-                            <button class="btn-reveal" onclick="goToAlga(${room.id}, '${room.name}')">
-                                🔥 Увидеть без маскировки 🔥
-                            </button>
-                        </div>
-                    </div>
-                `;
+                html += '<div class="card">';
+                html += '<div class="photos-row">';
+                html += renderPhoto(room.photos[0], 0);
+                html += renderPhoto(room.photos[1], 1);
+                html += renderPhoto(room.photos[2], 2);
+                html += '</div>';
+                html += '<div class="card-info">';
+                if (room.isBoosted) html += '<div class="boost-badge">🔥 ПОДНЯТО 🔥</div>';
+                html += `<span class="card-name">${room.name}</span>`;
+                html += `<span class="card-age">${room.age || '?'} лет</span>`;
+                html += `<div class="card-city">🔒 Город скрыт. Пригласи 3 друзей!</div>`;
+                html += `<button class="btn-reveal" onclick="goToAlga(${room.id}, '${room.name}')">🔥 Увидеть без маскировки 🔥</button>`;
+                html += '</div></div>';
             }
             
             document.getElementById('app').innerHTML = html;
         }
 
-        // Загружаем анкеты
         loadRooms();
     </script>
 </body>
