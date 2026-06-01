@@ -92,6 +92,11 @@
             padding: 48px;
             color: #666;
         }
+        .error {
+            text-align: center;
+            padding: 48px;
+            color: red;
+        }
     </style>
 </head>
 <body>
@@ -104,36 +109,58 @@
         tg.ready();
         tg.expand();
 
-        let hunterHasRadar = false;
+        // Получаем hunter_id из данных Telegram (позже добавим)
+        let hunterId = 0;
+        let hunterHasRadar = false; // будет true, если привел 3 друзей
 
-        const demoRooms = [
-            { id: 1, name: "Мария", age: 23, city: "Москва", photos: ["📸", "📸", "🔒"], isBoosted: true },
-            { id: 2, name: "Анна", age: 25, city: "СПБ", photos: ["📸", "📸", "🔒"], isBoosted: false },
-            { id: 3, name: "Елена", age: 22, city: "Казань", photos: ["📸", "📸", "🔒"], isBoosted: true }
-        ];
+        // API URL (твой сервер)
+        const API_URL = 'http://185.200.178.59:8001/api/rooms';
 
-        function sortByBoost(rooms) {
-            return [...rooms].sort((a, b) => {
-                if (a.isBoosted === b.isBoosted) return 0;
-                return a.isBoosted ? -1 : 1;
-            });
+        async function loadRooms() {
+            try {
+                const response = await fetch(`${API_URL}?hunter_id=${hunterId}&page=1&per_page=20`);
+                const data = await response.json();
+                
+                if (data.error) {
+                    document.getElementById('app').innerHTML = `<div class="error">Ошибка: ${data.error}</div>`;
+                    return;
+                }
+                
+                render(data.rooms);
+            } catch (err) {
+                document.getElementById('app').innerHTML = `<div class="error">Ошибка загрузки: ${err.message}</div>`;
+            }
         }
 
         function goToAlga(roomId, roomName) {
-            tg.sendData(JSON.stringify({ action: 'view_room', room_id: roomId, room_name: roomName }));
+            tg.sendData(JSON.stringify({ 
+                action: 'view_room', 
+                room_id: roomId,
+                room_name: roomName 
+            }));
             tg.close();
         }
 
-        function render() {
-            const sorted = sortByBoost(demoRooms);
+        function render(rooms) {
+            if (!rooms || rooms.length === 0) {
+                document.getElementById('app').innerHTML = '<div class="loading">😢 Пока нет анкет. Заходи позже!</div>';
+                return;
+            }
+
             let html = '<h2>🌸 Охота на девушек</h2>';
-            for (let room of sorted) {
+            
+            for (let room of rooms) {
+                // Сортируем фото: первые два обычные, третье под спойлером
+                const photo1 = room.photos?.[0] || '📸';
+                const photo2 = room.photos?.[1] || '📸';
+                const photo3 = room.photos?.[2] || '🔒';
+                
                 html += `
                     <div class="card">
                         <div class="photos-row">
-                            <div class="photo">${room.photos[0]}</div>
-                            <div class="photo">${room.photos[1]}</div>
-                            <div class="photo spoiler">${room.photos[2]}</div>
+                            <div class="photo">${photo1}</div>
+                            <div class="photo">${photo2}</div>
+                            <div class="photo spoiler">${photo3}</div>
                         </div>
                         <div class="card-info">
                             ${room.isBoosted ? '<div class="boost-badge">🔥 ПОДНЯТО 🔥</div>' : ''}
@@ -149,10 +176,12 @@
                     </div>
                 `;
             }
+            
             document.getElementById('app').innerHTML = html;
         }
 
-        render();
+        // Загружаем анкеты
+        loadRooms();
     </script>
 </body>
 </html>
