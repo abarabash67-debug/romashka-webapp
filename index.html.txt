@@ -1,0 +1,232 @@
+Skip to content
+abarabash67-debug
+romashka-webapp
+Repository navigation
+Code
+Issues
+Pull requests
+Agents
+Actions
+Projects
+Wiki
+Security and quality
+Insights
+Settings
+Commit bb0c69f
+abarabash67-debug
+abarabash67-debug
+authored
+19 hours ago
+·
+·
+Verified
+Add initial HTML structure for content showcase
+main
+0 parents  commit 
+bb0c69f
+1 file changed
+
++192
+Lines changed: 192 additions & 0 deletions
+File tree
+Filter files…
+index.html
+Search within code
+ 
+Customizable line height
+The default line height has been increased for improved accessibility. You can choose to enable a more compact line height from the view settings menu.
+
+‎index.html‎
++192
+Lines changed: 192 additions & 0 deletions
+Original file line number	Diff line number	Diff line change
+@@ -0,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Витрина контента</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: var(--tg-theme-bg-color, #ffffff);
+            color: var(--tg-theme-text-color, #000000);
+            padding: 16px;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 16px;
+        }
+        .card {
+            background: var(--tg-theme-secondary-bg-color, #f5f5f5);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: transform 0.1s ease;
+        }
+        .card:active {
+            transform: scale(0.98);
+        }
+        .card-preview {
+            width: 100%;
+            height: 200px;
+            background: #e0e0e0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+        }
+        .card-info {
+            padding: 12px;
+        }
+        .card-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+        .card-author {
+            font-size: 14px;
+            color: var(--tg-theme-hint-color, #666);
+            margin-bottom: 8px;
+        }
+        .card-stats {
+            font-size: 12px;
+            margin-bottom: 8px;
+        }
+        .card-price {
+            font-size: 20px;
+            font-weight: bold;
+            color: var(--tg-theme-button-color, #2481cc);
+        }
+        .buy-button {
+            background: var(--tg-theme-button-color, #2481cc);
+            color: var(--tg-theme-button-text-color, #ffffff);
+            border: none;
+            padding: 10px 16px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            width: 100%;
+            margin-top: 12px;
+            cursor: pointer;
+        }
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            margin-top: 24px;
+            margin-bottom: 16px;
+        }
+        .page-btn {
+            background: var(--tg-theme-button-color, #2481cc);
+            color: var(--tg-theme-button-text-color, #ffffff);
+            border: none;
+            padding: 8px 20px;
+            border-radius: 24px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .page-info {
+            font-size: 16px;
+            padding: 8px 0;
+        }
+        .loading {
+            text-align: center;
+            padding: 48px;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="loading">Загрузка витрины...</div>
+    </div>
+    <script>
+        let tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand();
+        let currentPage = 1;
+        let totalPages = 1;
+        let rooms = [];
+        async function loadRooms(page) {
+            try {
+                const response = await fetch(`/api/rooms?page=${page}&per_page=10`);
+                const data = await response.json();
+                rooms = data.rooms;
+                totalPages = data.total_pages;
+                currentPage = data.page;
+                render();
+            } catch (err) {
+                document.getElementById('app').innerHTML = `<div class="loading">Ошибка загрузки: ${err.message}</div>`;
+            }
+        }
+        function render() {
+            if (!rooms.length && totalPages === 0) {
+                document.getElementById('app').innerHTML = '<div class="loading">Нет доступных комнат</div>';
+                return;
+            }
+            const html = `
+                <div class="grid">
+                    ${rooms.map(room => `
+                        <div class="card">
+                            <div class="card-preview">
+                                ${room.has_preview ? '📸' : '📁'}
+                            </div>
+                            <div class="card-info">
+                                <div class="card-title">${escapeHtml(room.name)}</div>
+                                <div class="card-author">${escapeHtml(room.author)}</div>
+                                <div class="card-stats">📸 ${room.photo_count} | 🎬 ${room.video_count} | 📄 ${room.doc_count}</div>
+                                <div class="card-price">${room.price} ${room.currency === 'USDT' ? '💵' : '⭐'}</div>
+                                <button class="buy-button" data-id="${room.id}">Купить доступ</button>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+                <div class="pagination">
+                    <button class="page-btn" id="prevBtn" ${currentPage <= 1 ? 'disabled' : ''}>◀️ Назад</button>
+                    <span class="page-info">${currentPage} / ${totalPages}</span>
+                    <button class="page-btn" id="nextBtn" ${currentPage >= totalPages ? 'disabled' : ''}>Вперед ▶️</button>
+                </div>
+            `;
+            document.getElementById('app').innerHTML = html;
+            document.querySelectorAll('.buy-button').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const roomId = btn.getAttribute('data-id');
+                    tg.sendData(JSON.stringify({ action: 'view_room', room_id: parseInt(roomId) }));
+                    tg.close();
+                });
+            });
+            document.getElementById('prevBtn')?.addEventListener('click', () => {
+                if (currentPage > 1) loadRooms(currentPage - 1);
+            });
+            document.getElementById('nextBtn')?.addEventListener('click', () => {
+                if (currentPage < totalPages) loadRooms(currentPage + 1);
+            });
+        }
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
+        loadRooms(1);
+    </script>
+</body>
+</html>
+0 commit comments
+Comments
+0
+ (0)
+Comment
+You're not receiving notifications from this thread.
